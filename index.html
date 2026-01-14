@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GHCN Temperature Explorer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body data-api-base="">
+    <div class="bg-noise" aria-hidden="true"></div>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div class="brand-text">
+          <p class="eyebrow">GHCN Climate Lab</p>
+          <h1>Temperature Atlas</h1>
+          <p class="subhead">Explore station coverage, annual means, and seasonal signals.</p>
+        </div>
+      </div>
+      <div class="top-controls">
+        <label class="switch">
+          <input type="checkbox" id="legend-toggle" checked>
+          <span class="slider"></span>
+          <span class="switch-label">Legend</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="dark-toggle">
+          <span class="slider"></span>
+          <span class="switch-label">Dark</span>
+        </label>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel table-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Annual Table</h2>
+            <p class="muted" id="table-title">Select a station to populate the table.</p>
+          </div>
+          <div class="chip" id="coverage-chip">No station</div>
+        </div>
+        <div class="table-wrap">
+          <table id="year-table">
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th>Tmin (C)</th>
+                <th>Tmax (C)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="empty-row">
+                <td colspan="3">No data yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel chart-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Temperature Trends</h2>
+            <p class="muted" id="chart-title">Run a search and pick a station to see the chart.</p>
+          </div>
+          <div class="metrics">
+            <span class="metric" id="station-count">0 stations</span>
+            <span class="metric" id="year-range">Start - End</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="trend-chart" aria-label="Temperature chart"></canvas>
+          <div class="empty-state" id="chart-empty">
+            <div class="empty-card">
+              <h3>No station selected</h3>
+              <p>Search by coordinates, pick a station, and the chart will appear.</p>
+            </div>
+          </div>
+        </div>
+        <div class="season-row">
+          <div class="season-label">Seasons</div>
+          <label class="check">
+            <input type="checkbox" data-season="spring">
+            <span>Spring</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" data-season="summer">
+            <span>Summer</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" data-season="autumn">
+            <span>Autumn</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" data-season="winter">
+            <span>Winter</span>
+          </label>
+        </div>
+      </section>
+
+      <aside class="panel control-panel">
+        <div class="panel-head">
+          <div>
+            <h2>View Configuration</h2>
+            <p class="muted">Find stations around a coordinate and compare yearly means.</p>
+          </div>
+        </div>
+        <form id="search-form" novalidate>
+          <div class="field">
+            <label for="lat">Latitude</label>
+            <input id="lat" name="lat" type="number" step="0.00001" min="-90" max="90" required>
+          </div>
+          <div class="field">
+            <label for="lon">Longitude</label>
+            <input id="lon" name="lon" type="number" step="0.00001" min="-180" max="180" required>
+          </div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="radius">Radius (km)</label>
+              <input id="radius" name="radius" type="number" min="1" max="1000" step="1">
+            </div>
+            <div class="field">
+              <label for="limit">Max stations</label>
+              <input id="limit" name="limit" type="number" min="1" max="50" step="1">
+            </div>
+          </div>
+          <label class="check inline">
+            <input type="checkbox" id="all-stations">
+            <span>All stations (ignore limit)</span>
+          </label>
+          <div class="field-grid">
+            <div class="field">
+              <label for="start-year">Start year</label>
+              <input id="start-year" name="start" type="number" min="1800" max="2025" step="1">
+            </div>
+            <div class="field">
+              <label for="end-year">End year</label>
+              <input id="end-year" name="end" type="number" min="1800" max="2025" step="1">
+            </div>
+          </div>
+          <div class="button-row">
+            <button type="button" class="ghost" id="from-map" disabled>From Map</button>
+            <button type="submit" class="primary" id="search-btn">Search</button>
+            <button type="button" class="ghost" id="reset-btn">Reset</button>
+          </div>
+          <div class="status-row">
+            <div class="pill" id="stations-pill">No stations yet</div>
+            <div class="status-text" id="status-text" aria-live="polite"></div>
+            <div class="spinner" id="spinner" aria-hidden="true"></div>
+          </div>
+        </form>
+
+        <div class="station-panel">
+          <div class="station-head">
+            <h3>Available Stations</h3>
+            <span class="muted" id="station-hint">Sorted by distance</span>
+          </div>
+          <ul id="station-list" class="station-list"></ul>
+        </div>
+
+        <div class="panel-footer">
+          <label class="switch">
+            <input type="checkbox" id="map-toggle">
+            <span class="slider"></span>
+            <span class="switch-label">Map View</span>
+          </label>
+        </div>
+      </aside>
+    </main>
+
+    <section class="panel map-panel" id="map-panel">
+      <div class="panel-head">
+        <div>
+          <h2>Map View</h2>
+          <p class="muted">Click the map to set coordinates, then use From Map.</p>
+        </div>
+        <div class="chip" id="map-status">Map ready</div>
+      </div>
+      <div id="map" class="map"></div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
