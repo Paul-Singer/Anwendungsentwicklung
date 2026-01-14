@@ -1,0 +1,14 @@
+services:
+  ghcn-backend:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      CORS_ORIGIN: "*"
+      DATA_DIR: /data
+      SERVE_STATIC: "1"
+    volumes:
+      - ghcn-data:/data
+
+volumes:
+  ghcn-data:

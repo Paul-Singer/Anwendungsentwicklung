@@ -1,0 +1,10 @@
+node_modules
+data
+.git
+.github
+.vscode
+tests
+*.pdf
+*.md
+.env
+package-lock.json

@@ -1,0 +1,28 @@
+﻿{
+  "name": "ghcn-app",
+  "version": "0.2.0",
+  "private": true,
+  "description": "GHCN temperature explorer backend",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "sync:metadata": "node scripts/sync-metadata.js",
+    "test": "jest --runInBand",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.4"
+  }
+}
