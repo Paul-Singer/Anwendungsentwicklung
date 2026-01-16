@@ -65,6 +65,17 @@ Oder via Compose:
 docker compose up --build
 ```
 
+## Autostart unter Windows 11
+1) Docker Desktop so einstellen, dass es beim Login startet.
+2) Task einmalig anlegen:
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/register-task.ps1
+```
+
+Der Task startet `docker compose up -d` beim Login.
+Falls "Zugriff verweigert" erscheint, PowerShell als Administrator starten
+und den Befehl erneut ausfuehren.
+
 ## CI/CD
 Der GitHub Actions Workflow:
 - Fuehrt Tests aus

@@ -1,1008 +1,540 @@
-const DEFAULTS = {
-  lat: 49.4702,
-  lon: 10.90191,
-  radius: 50,
-  limit: 5,
-  startYear: 1960,
-  endYear: 2025,
-};
-
-const API_BASE = (document.body && document.body.dataset.apiBase) || window.GHCN_API_BASE || "";
-
-const I18N = {
-  en: {
-    documentTitle: "GHCN Temperature Explorer",
-    languageLabel: "Language",
-    languageEnglish: "English",
-    languageGerman: "German",
-    brandEyebrow: "GHCN Climate Lab",
-    brandTitle: "Temperature Atlas",
-    brandSubhead: "Explore station coverage, annual means, and seasonal signals.",
-    legendLabel: "Legend",
-    darkLabel: "Dark",
-    annualTable: "Annual Table",
-    tableHint: "Select a station to populate the table.",
-    noStation: "No station",
-    yearHeader: "Year",
-    tminHeader: "Tmin (C)",
-    tmaxHeader: "Tmax (C)",
-    noDataYet: "No data yet.",
-    temperatureTrends: "Temperature Trends",
-    chartHint: "Run a search and pick a station to see the chart.",
-    emptyTitle: "No station selected",
-    emptyBody: "Search by coordinates, pick a station, and the chart will appear.",
-    seasonsLabel: "Seasons",
-    seasonSpring: "Spring",
-    seasonSummer: "Summer",
-    seasonAutumn: "Autumn",
-    seasonWinter: "Winter",
-    viewConfig: "View Configuration",
-    viewConfigHint: "Find stations around a coordinate and compare yearly means.",
-    latitude: "Latitude",
-    longitude: "Longitude",
-    radius: "Radius (km)",
-    maxStations: "Max stations",
-    allStations: "All stations (ignore limit)",
-    startYear: "Start year",
-    endYear: "End year",
-    fromMap: "From Map",
-    search: "Search",
-    reset: "Reset",
-    noStationsYet: "No stations yet",
-    availableStations: "Available Stations",
-    sortedByDistance: "Sorted by distance",
-    mapView: "Map View",
-    mapHint: "Click the map to set coordinates, then use From Map.",
-    mapReady: "Map ready",
-    chartAria: "Temperature chart",
-    stationsLoaded: "Stations loaded.",
-    stationsNone: "No stations found.",
-    searchFailed: "Search failed.",
-    filtersReset: "Filters reset.",
-    mapPickFirst: "Click the map to choose a point first.",
-    coordsFromMap: "Coordinates updated from map.",
-    stationLoaded: "Station data loaded.",
-    stationFailed: "Failed to load station data.",
-    chartUnavailable: "Chart.js is not available.",
-    leafletUnavailable: "Leaflet is not available.",
-    stationSearchFailed: "Station search failed.",
-    stationResponseInvalid: "Station response is not a list.",
-    stationDataFailed: "Station data request failed.",
-    annualMeansFor: "Annual means for {name}",
-    trendsFor: "Trend lines for {name}",
-    coverageStation: "Station {name}",
-    noStationsAvailable: "No stations available.",
-    tableNoData: "No data available.",
-    distanceNA: "Distance n/a",
-    stationCount: "{count} station|{count} stations",
-    stationsPill: "{count} station|{count} stations",
-    yearRange: "{start} - {end}",
-    yearRangePlaceholder: "Start - End",
-    temperatureAxis: "Temperature (C)",
-    annualTmin: "Annual Tmin",
-    annualTmax: "Annual Tmax",
-    validationLatitude: "Latitude must be between -90 and 90.",
-    validationLongitude: "Longitude must be between -180 and 180.",
-    validationRadius: "Radius must be greater than 0.",
-    validationLimit: "Max stations must be greater than 0.",
-    validationYears: "Enter a valid start and end year.",
-    validationStartEnd: "Start year must be earlier than end year.",
-    validationEndYear: "End year must not exceed 2025.",
-    pointSelected: "Point selected",
-  },
-  de: {
-    documentTitle: "GHCN Temperatur-Explorer",
-    languageLabel: "Sprache",
-    languageEnglish: "Englisch",
-    languageGerman: "Deutsch",
-    brandEyebrow: "GHCN Klima-Labor",
-    brandTitle: "Temperatur-Atlas",
-    brandSubhead: "Stationsabdeckung, Jahresmittel und saisonale Signale anzeigen.",
-    legendLabel: "Legende",
-    darkLabel: "Dunkel",
-    annualTable: "Jahrestabelle",
-    tableHint: "Station auswaehlen, um die Tabelle zu fuellen.",
-    noStation: "Keine Station",
-    yearHeader: "Jahr",
-    tminHeader: "Tmin (C)",
-    tmaxHeader: "Tmax (C)",
-    noDataYet: "Noch keine Daten.",
-    temperatureTrends: "Temperaturverlauf",
-    chartHint: "Suche starten und Station auswaehlen, um das Diagramm zu sehen.",
-    emptyTitle: "Keine Station gewaehlt",
-    emptyBody: "Suche per Koordinaten, Station waehlen, dann erscheint das Diagramm.",
-    seasonsLabel: "Jahreszeiten",
-    seasonSpring: "Fruehling",
-    seasonSummer: "Sommer",
-    seasonAutumn: "Herbst",
-    seasonWinter: "Winter",
-    viewConfig: "Ansicht konfigurieren",
-    viewConfigHint: "Stationen um Koordinaten finden und Jahresmittel vergleichen.",
-    latitude: "Breite",
-    longitude: "Laenge",
-    radius: "Radius (km)",
-    maxStations: "Max. Stationen",
-    allStations: "Alle Stationen (Limit ignorieren)",
-    startYear: "Startjahr",
-    endYear: "Endjahr",
-    fromMap: "Von Karte",
-    search: "Suche",
-    reset: "Zuruecksetzen",
-    noStationsYet: "Noch keine Stationen",
-    availableStations: "Verfuegbare Stationen",
-    sortedByDistance: "Nach Distanz sortiert",
-    mapView: "Kartenansicht",
-    mapHint: "Karte anklicken, dann 'Von Karte' nutzen.",
-    mapReady: "Karte bereit",
-    chartAria: "Temperaturdiagramm",
-    stationsLoaded: "Stationen geladen.",
-    stationsNone: "Keine Stationen gefunden.",
-    searchFailed: "Suche fehlgeschlagen.",
-    filtersReset: "Filter zurueckgesetzt.",
-    mapPickFirst: "Erst einen Punkt auf der Karte waehlen.",
-    coordsFromMap: "Koordinaten aus Karte uebernommen.",
-    stationLoaded: "Stationsdaten geladen.",
-    stationFailed: "Stationsdaten konnten nicht geladen werden.",
-    chartUnavailable: "Chart.js ist nicht verfuegbar.",
-    leafletUnavailable: "Leaflet ist nicht verfuegbar.",
-    stationSearchFailed: "Stationssuche fehlgeschlagen.",
-    stationResponseInvalid: "Stationsantwort ist keine Liste.",
-    stationDataFailed: "Stationsdaten-Anfrage fehlgeschlagen.",
-    annualMeansFor: "Jahresmittel fuer {name}",
-    trendsFor: "Trendlinien fuer {name}",
-    coverageStation: "Station {name}",
-    noStationsAvailable: "Keine Stationen verfuegbar.",
-    tableNoData: "Keine Daten verfuegbar.",
-    distanceNA: "Distanz n/v",
-    stationCount: "{count} Station|{count} Stationen",
-    stationsPill: "{count} Station|{count} Stationen",
-    yearRange: "{start} - {end}",
-    yearRangePlaceholder: "Start - Ende",
-    temperatureAxis: "Temperatur (C)",
-    annualTmin: "Jahresmittel Tmin",
-    annualTmax: "Jahresmittel Tmax",
-    validationLatitude: "Breite muss zwischen -90 und 90 liegen.",
-    validationLongitude: "Laenge muss zwischen -180 und 180 liegen.",
-    validationRadius: "Radius muss groesser als 0 sein.",
-    validationLimit: "Max. Stationen muss groesser als 0 sein.",
-    validationYears: "Gueltiges Start- und Endjahr eingeben.",
-    validationStartEnd: "Startjahr muss vor Endjahr liegen.",
-    validationEndYear: "Endjahr darf 2025 nicht ueberschreiten.",
-    pointSelected: "Punkt gewaehlt",
-  },
-};
-
-const SEASONS = [
-  { key: "spring", labelKey: "seasonSpring", tmin: "#3e9a6f", tmax: "#6db388" },
-  { key: "summer", labelKey: "seasonSummer", tmin: "#d68b2c", tmax: "#f2a85c" },
-  { key: "autumn", labelKey: "seasonAutumn", tmin: "#a56a43", tmax: "#c07d56" },
-  { key: "winter", labelKey: "seasonWinter", tmin: "#2f8ca3", tmax: "#4db6c6" },
-];
-
-const ANNUAL_COLORS = {
-  tmin: "#3a6fa3",
-  tmax: "#d04b3b",
-};
-
-const elements = {
-  form: document.getElementById("search-form"),
-  langSelect: document.getElementById("lang-select"),
-  lat: document.getElementById("lat"),
-  lon: document.getElementById("lon"),
-  radius: document.getElementById("radius"),
-  limit: document.getElementById("limit"),
-  allStations: document.getElementById("all-stations"),
-  startYear: document.getElementById("start-year"),
-  endYear: document.getElementById("end-year"),
-  searchBtn: document.getElementById("search-btn"),
-  resetBtn: document.getElementById("reset-btn"),
-  fromMapBtn: document.getElementById("from-map"),
-  statusText: document.getElementById("status-text"),
-  stationsPill: document.getElementById("stations-pill"),
-  spinner: document.getElementById("spinner"),
-  stationList: document.getElementById("station-list"),
-  stationCount: document.getElementById("station-count"),
-  yearRange: document.getElementById("year-range"),
-  tableTitle: document.getElementById("table-title"),
-  chartTitle: document.getElementById("chart-title"),
-  coverageChip: document.getElementById("coverage-chip"),
-  chartEmpty: document.getElementById("chart-empty"),
-  table: document.getElementById("year-table"),
-  seasonChecks: Array.from(document.querySelectorAll("[data-season]")),
-  legendToggle: document.getElementById("legend-toggle"),
-  darkToggle: document.getElementById("dark-toggle"),
-  mapToggle: document.getElementById("map-toggle"),
-  mapPanel: document.getElementById("map-panel"),
-  mapStatus: document.getElementById("map-status"),
-};
-
-const state = {
-  stations: [],
-  selectedId: null,
-  selectedStation: null,
-  data: null,
-  language: "en",
-  activeSeasons: new Set(),
-  chart: null,
-  map: null,
-  mapLayers: [],
-  mapPoint: null,
-  lastSearch: null,
-};
-
-function getString(key) {
-  const dictionary = I18N[state.language] || I18N.en;
-  return dictionary[key] || I18N.en[key] || "";
-}
-
-function t(key, vars) {
-  let value = getString(key);
-  if (!vars) {
-    return value;
-  }
-  return value.replace(/\{(\w+)\}/g, (match, name) => {
-    if (Object.prototype.hasOwnProperty.call(vars, name)) {
-      return vars[name];
-    }
-    return match;
-  });
-}
-
-function tPlural(key, count) {
-  const value = getString(key);
-  if (value.includes("|")) {
-    const parts = value.split("|");
-    const template = count === 1 ? parts[0] : parts[1];
-    return template.replace("{count}", count);
-  }
-  return t(key, { count });
-}
-
-function applyTranslations() {
-  document.querySelectorAll("[data-i18n]").forEach((element) => {
-    const key = element.dataset.i18n;
-    if (key) {
-      element.textContent = t(key);
-    }
-  });
-  document.querySelectorAll("[data-i18n-aria]").forEach((element) => {
-    const key = element.dataset.i18nAria;
-    if (key) {
-      element.setAttribute("aria-label", t(key));
-    }
-  });
-  document.title = t("documentTitle");
-}
-
-function initLanguage() {
-  const stored = window.localStorage ? localStorage.getItem("ghcn-lang") : null;
-  const preferred = stored || document.documentElement.lang || "en";
-  applyLanguage(preferred);
-}
-
-function applyLanguage(lang) {
-  state.language = I18N[lang] ? lang : "en";
-  document.documentElement.lang = state.language;
-  if (elements.langSelect) {
-    elements.langSelect.value = state.language;
-  }
-  if (window.localStorage) {
-    localStorage.setItem("ghcn-lang", state.language);
-  }
-  applyTranslations();
-  updateMetrics();
-  updatePill(state.stations.length);
-  updateStationTitles(state.data || {});
-  if (state.stations.length || elements.stationList.children.length) {
-    renderStations(state.stations);
-    if (state.selectedId) {
-      highlightStation(state.selectedId);
-    }
-  }
-  if (state.data) {
-    renderChart(state.data);
-    renderTable(state.data);
-  } else {
-    renderEmptyTable();
-  }
-  updateMapStatus();
-  updateSearchButton();
-}
-
-function updateMapStatus() {
-  if (!elements.mapStatus) {
-    return;
-  }
-  elements.mapStatus.textContent = state.mapPoint ? t("pointSelected") : t("mapReady");
-}
-
-function init() {
-  setDefaults();
-  bindEvents();
-  toggleLimitInput();
-  initLanguage();
-  updateSearchButton();
-  if (window.Chart) {
-    Chart.defaults.font.family = "\"Sora\", sans-serif";
-  }
-}
-
-function setDefaults() {
-  elements.lat.value = DEFAULTS.lat.toFixed(5);
-  elements.lon.value = DEFAULTS.lon.toFixed(5);
-  elements.radius.value = DEFAULTS.radius;
-  elements.limit.value = DEFAULTS.limit;
-  elements.startYear.value = DEFAULTS.startYear;
-  elements.endYear.value = DEFAULTS.endYear;
-}
-
-function bindEvents() {
-  elements.form.addEventListener("submit", handleSearch);
-  elements.resetBtn.addEventListener("click", handleReset);
-  elements.fromMapBtn.addEventListener("click", handleFromMap);
-  elements.allStations.addEventListener("change", toggleLimitInput);
-  if (elements.langSelect) {
-    elements.langSelect.addEventListener("change", handleLanguageChange);
-  }
-  elements.seasonChecks.forEach((input) => {
-    input.addEventListener("change", handleSeasonToggle);
-  });
-  elements.legendToggle.addEventListener("change", handleLegendToggle);
-  elements.darkToggle.addEventListener("change", handleThemeToggle);
-  elements.mapToggle.addEventListener("change", handleMapToggle);
-  elements.stationList.addEventListener("click", handleStationClick);
-  ["input", "change"].forEach((eventName) => {
-    elements.lat.addEventListener(eventName, updateSearchButton);
-    elements.lon.addEventListener(eventName, updateSearchButton);
-    elements.startYear.addEventListener(eventName, updateSearchButton);
-    elements.endYear.addEventListener(eventName, updateSearchButton);
-  });
-}
-
-function readForm() {
-  return {
-    lat: parseFloat(elements.lat.value),
-    lon: parseFloat(elements.lon.value),
-    radius: parseFloat(elements.radius.value),
-    limit: parseInt(elements.limit.value, 10),
-    allStations: elements.allStations.checked,
-    startYear: parseInt(elements.startYear.value, 10),
-    endYear: parseInt(elements.endYear.value, 10),
+﻿(() => {
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const LANGS = ["en", "de"];
+  const TEXT = {
+    documentTitle: ["GHCN Temperature Dashboard", "GHCN Temperatur Dashboard"],
+    brandEyebrow: ["GHCN Climate Data", "GHCN Klimadaten"],
+    brandTitle: ["Temperature Dashboard", "Temperatur Dashboard"],
+    brandSubhead: [
+      "Search stations and compare annual and seasonal means.",
+      "Stationen suchen und Jahres- sowie Saisonmittel vergleichen.",
+    ],
+    languageLabel: ["Language", "Sprache"],
+    languageEnglish: ["English", "Englisch"],
+    languageGerman: ["German", "Deutsch"],
+    themeLabel: ["Theme", "Thema"],
+    themeLight: ["Light", "Hell"],
+    themeDark: ["Dark", "Dunkel"],
+    viewConfig: ["Search & Filters", "Suche & Filter"],
+    viewConfigHint: [
+      "Step 1: Coordinates. Step 2: Search. Step 3: Select station.",
+      "Schritt 1: Koordinaten. Schritt 2: Suche. Schritt 3: Station waehlen.",
+    ],
+    locationLegend: ["Location", "Standort"],
+    coordHint: [
+      "Use decimal degrees (e.g. 49.47020, 10.90191).",
+      "Dezimalgrad nutzen (z. B. 49.47020, 10.90191).",
+    ],
+    latitude: ["Latitude", "Breitengrad"],
+    longitude: ["Longitude", "Laengengrad"],
+    filterLegend: ["Filters", "Filter"],
+    radius: ["Radius (km)", "Radius (km)"],
+    maxStations: ["Max stations", "Max. Stationen"],
+    allStations: ["All stations (ignore limit)", "Alle Stationen (Limit ignorieren)"],
+    startYear: ["Start year", "Startjahr"],
+    endYear: ["End year", "Endjahr"],
+    search: ["Search", "Suchen"],
+    reset: ["Reset", "Zuruecksetzen"],
+    availableStations: ["Available Stations", "Verfuegbare Stationen"],
+    sortedByDistance: ["Sorted by distance", "Nach Distanz sortiert"],
+    temperatureTrends: ["Temperature Chart", "Temperatur Diagramm"],
+    chartAria: ["Temperature chart", "Temperaturdiagramm"],
+    emptyTitle: ["No station selected", "Keine Station gewaehlt"],
+    emptyBody: [
+      "Search by coordinates, pick a station, and the chart will appear.",
+      "Koordinaten eingeben, Station waehlen und das Diagramm erscheint.",
+    ],
+    seasonsLabel: ["Seasons (optional)", "Jahreszeiten (optional)"],
+    seasonSpring: ["Spring", "Fruehling"],
+    seasonSummer: ["Summer", "Sommer"],
+    seasonAutumn: ["Autumn", "Herbst"],
+    seasonWinter: ["Winter", "Winter"],
+    annualTable: ["Annual Means", "Jahresmittel"],
+    tableCaption: ["Annual temperature means by year", "Jaehrliche Temperaturmittel pro Jahr"],
+    yearHeader: ["Year", "Jahr"],
+    tminHeader: ["Tmin (C)", "Tmin (C)"],
+    tmaxHeader: ["Tmax (C)", "Tmax (C)"],
+    noDataYet: ["No data yet.", "Noch keine Daten."],
+    skipToContent: ["Skip to content", "Zum Inhalt springen"],
+    chartHint: ["Run a search, then select a station.", "Suche ausfuehren und Station waehlen."],
+    tableHint: ["Select a station to show the table.", "Station waehlen, um die Tabelle zu sehen."],
+    noStationsYet: ["No stations yet", "Noch keine Stationen"],
+    stationsNone: ["No stations found.", "Keine Stationen gefunden."],
+    stationsLoaded: ["Stations loaded.", "Stationen geladen."],
+    stationLoaded: ["Station data loaded.", "Stationsdaten geladen."],
+    filtersReset: ["Filters reset.", "Filter zurueckgesetzt."],
+    requestFailed: ["Request failed.", "Anfrage fehlgeschlagen."],
+    stationCountSingular: ["{count} station", "{count} Station"],
+    stationCountPlural: ["{count} stations", "{count} Stationen"],
+    yearRangePlaceholder: ["Start - End", "Start - Ende"],
+    trendsFor: ["Trends for {station}", "Trends fuer {station}"],
+    annualMeansFor: ["Annual means for {station}", "Jahresmittel fuer {station}"],
+    coverageStation: ["Station: {station}", "Station: {station}"],
+    distanceLabel: ["{distance} km", "{distance} km"],
+    noStationsAvailable: ["No stations available.", "Keine Stationen vorhanden."],
+    validationLat: ["Latitude must be between -90 and 90.", "Breitengrad muss zwischen -90 und 90 liegen."],
+    validationLon: ["Longitude must be between -180 and 180.", "Laengengrad muss zwischen -180 und 180 liegen."],
+    validationRadius: ["Radius must be greater than 0.", "Radius muss groesser als 0 sein."],
+    validationYears: [
+      "Start year must be earlier than end year.",
+      "Startjahr muss vor dem Endjahr liegen.",
+    ],
+    validationRange: [
+      "Year range must be between {min} and {max}.",
+      "Jahresbereich muss zwischen {min} und {max} liegen.",
+    ],
+    annualTmin: ["Annual Tmin", "Jahr Tmin"],
+    annualTmax: ["Annual Tmax", "Jahr Tmax"],
+    springTmin: ["Spring Tmin", "Fruehling Tmin"],
+    springTmax: ["Spring Tmax", "Fruehling Tmax"],
+    summerTmin: ["Summer Tmin", "Sommer Tmin"],
+    summerTmax: ["Summer Tmax", "Sommer Tmax"],
+    autumnTmin: ["Autumn Tmin", "Herbst Tmin"],
+    autumnTmax: ["Autumn Tmax", "Herbst Tmax"],
+    winterTmin: ["Winter Tmin", "Winter Tmin"],
+    winterTmax: ["Winter Tmax", "Winter Tmax"],
+    temperatureAxis: ["Temperature (C)", "Temperatur (C)"],
   };
-}
 
-function validateForm(values) {
-  if (Number.isNaN(values.lat) || values.lat < -90 || values.lat > 90) {
-    return { ok: false, message: t("validationLatitude") };
-  }
-  if (Number.isNaN(values.lon) || values.lon < -180 || values.lon > 180) {
-    return { ok: false, message: t("validationLongitude") };
-  }
-  if (Number.isNaN(values.radius) || values.radius <= 0) {
-    return { ok: false, message: t("validationRadius") };
-  }
-  if (!values.allStations && (Number.isNaN(values.limit) || values.limit <= 0)) {
-    return { ok: false, message: t("validationLimit") };
-  }
-  if (Number.isNaN(values.startYear) || Number.isNaN(values.endYear)) {
-    return { ok: false, message: t("validationYears") };
-  }
-  if (values.startYear > values.endYear) {
-    return { ok: false, message: t("validationStartEnd") };
-  }
-  if (values.endYear > DEFAULTS.endYear) {
-    return { ok: false, message: t("validationEndYear") };
-  }
-  return { ok: true };
-}
+  const form = $("#search-form");
+  const latInput = $("#lat");
+  const lonInput = $("#lon");
+  const radiusInput = $("#radius");
+  const limitInput = $("#limit");
+  const allStationsInput = $("#all-stations");
+  const startInput = $("#start-year");
+  const endInput = $("#end-year");
+  const searchBtn = $("#search-btn");
+  const resetBtn = $("#reset-btn");
+  const stationList = $("#station-list");
+  const stationsPill = $("#stations-pill");
+  const statusText = $("#status-text");
+  const spinner = $("#spinner");
+  const stationCount = $("#station-count");
+  const yearRange = $("#year-range");
+  const chartCanvas = $("#trend-chart");
+  const chartEmpty = $("#chart-empty");
+  const chartTitle = $("#chart-title");
+  const tableTitle = $("#table-title");
+  const coverageChip = $("#coverage-chip");
+  const table = $("#year-table");
+  const tableBody = table.querySelector("tbody");
+  const langSelect = $("#lang-select");
+  const themeSelect = $("#theme-select");
+  const seasonChecks = $$("input[data-season]");
+  const apiBase = document.body.dataset.apiBase || "";
 
-function updateSearchButton() {
-  const values = readForm();
-  const validation = validateForm(values);
-  elements.searchBtn.disabled = !validation.ok;
-  if (!validation.ok) {
-    setStatus(validation.message, "error");
-  } else {
-    setStatus("", "");
-  }
-}
+  const defaults = {
+    lat: 49.4702,
+    lon: 10.90191,
+    radius: 50,
+    limit: 5,
+    start: 1960,
+    end: 2025,
+  };
 
-async function handleSearch(event) {
-  event.preventDefault();
-  const values = readForm();
-  const validation = validateForm(values);
-  if (!validation.ok) {
-    setStatus(validation.message, "error");
-    return;
-  }
-  setLoading(true);
-  clearStationData();
-  updateMetrics(values, 0);
-  state.lastSearch = { lat: values.lat, lon: values.lon, radius: values.radius };
-  try {
-    const stations = await fetchStations(values);
-    state.stations = stations;
-    updateMetrics(values, stations.length);
-    updatePill(stations.length);
-    renderStations(stations);
-    setStatus(stations.length ? t("stationsLoaded") : t("stationsNone"), stations.length ? "success" : "");
-    if (elements.mapToggle.checked) {
-      updateMapStations();
-    }
-  } catch (error) {
-    setStatus(error.message || t("searchFailed"), "error");
-  } finally {
-    setLoading(false);
-  }
-}
+  let stations = [];
+  let selectedId = "";
+  let stationData = null;
+  let chart = null;
 
-function handleReset() {
-  elements.form.reset();
-  setDefaults();
-  toggleLimitInput();
-  elements.seasonChecks.forEach((input) => {
-    input.checked = false;
-  });
-  state.activeSeasons.clear();
-  clearStationData();
-  state.stations = [];
-  state.selectedId = null;
-  state.selectedStation = null;
-  state.lastSearch = null;
-  renderStations([]);
-  updateMetrics();
-  updatePill(0);
-  setStatus(t("filtersReset"), "");
-  if (elements.mapToggle.checked) {
-    updateMapStations();
-  }
-  updateSearchButton();
-}
-
-function handleLanguageChange(event) {
-  applyLanguage(event.target.value);
-}
-
-function handleFromMap() {
-  if (!state.mapPoint) {
-    setStatus(t("mapPickFirst"), "error");
-    return;
-  }
-  elements.lat.value = state.mapPoint.lat.toFixed(5);
-  elements.lon.value = state.mapPoint.lng.toFixed(5);
-  setStatus(t("coordsFromMap"), "success");
-  updateSearchButton();
-}
-
-function handleSeasonToggle(event) {
-  const key = event.target.dataset.season;
-  if (!key) {
-    return;
-  }
-  if (event.target.checked) {
-    state.activeSeasons.add(key);
-  } else {
-    state.activeSeasons.delete(key);
-  }
-  if (state.data) {
-    renderChart(state.data);
-    renderTable(state.data);
-  }
-}
-
-function handleLegendToggle() {
-  if (!state.chart) {
-    return;
-  }
-  state.chart.options.plugins.legend.display = elements.legendToggle.checked;
-  state.chart.update();
-}
-
-function handleThemeToggle() {
-  document.documentElement.setAttribute("data-theme", elements.darkToggle.checked ? "dark" : "light");
-  updateChartTheme();
-}
-
-function handleMapToggle() {
-  const show = elements.mapToggle.checked;
-  elements.mapPanel.classList.toggle("is-visible", show);
-  if (show) {
-    if (!state.map) {
-      initMap();
-    } else {
-      setTimeout(() => state.map.invalidateSize(), 200);
-    }
-    updateMapStations();
-  }
-  updateMapStatus();
-}
-
-function handleStationClick(event) {
-  const button = event.target.closest("button[data-id]");
-  if (!button) {
-    return;
-  }
-  const id = button.dataset.id;
-  selectStation(id);
-}
-
-function toggleLimitInput() {
-  elements.limit.disabled = elements.allStations.checked;
-}
-
-function setStatus(message, tone) {
-  elements.statusText.textContent = message || "";
-  if (tone) {
-    elements.statusText.dataset.tone = tone;
-  } else {
-    delete elements.statusText.dataset.tone;
-  }
-}
-
-function setLoading(isLoading) {
-  elements.spinner.classList.toggle("active", isLoading);
-  elements.searchBtn.disabled = isLoading || !validateForm(readForm()).ok;
-}
-
-function updatePill(count) {
-  if (count > 0) {
-    elements.stationsPill.textContent = tPlural("stationsPill", count);
-    elements.stationsPill.classList.add("active");
-  } else {
-    elements.stationsPill.textContent = t("noStationsYet");
-    elements.stationsPill.classList.remove("active");
-  }
-}
-
-function updateMetrics(values = readForm(), count = state.stations.length) {
-  elements.stationCount.textContent = tPlural("stationCount", count);
-  if (values.startYear && values.endYear) {
-    elements.yearRange.textContent = t("yearRange", { start: values.startYear, end: values.endYear });
-  } else {
-    elements.yearRange.textContent = t("yearRangePlaceholder");
-  }
-}
-
-async function fetchStations(values) {
-  const params = new URLSearchParams({
-    lat: values.lat,
-    lon: values.lon,
-    radius: values.radius,
-    start: values.startYear,
-    end: values.endYear,
-  });
-  if (!values.allStations && values.limit) {
-    params.set("limit", values.limit);
-  }
-  const response = await fetch(`${API_BASE}/stations?${params.toString()}`);
-  if (response.status === 204) {
-    return [];
-  }
-  if (!response.ok) {
-    throw new Error(t("stationSearchFailed"));
-  }
-  const data = await response.json();
-  if (!Array.isArray(data)) {
-    throw new Error(t("stationResponseInvalid"));
-  }
-  return data;
-}
-
-async function selectStation(id) {
-  if (state.selectedId === id) {
-    return;
-  }
-  state.selectedId = id;
-  state.selectedStation = state.stations.find((station) => station.id === id) || null;
-  highlightStation(id);
-  setLoading(true);
-  try {
-    const values = readForm();
-    const data = await fetchStationData(id, values.startYear, values.endYear);
-    state.data = data;
-    updateStationTitles(data);
-    renderChart(data);
-    renderTable(data);
-    setStatus(t("stationLoaded"), "success");
-    if (elements.mapToggle.checked) {
-      updateMapStations();
-    }
-  } catch (error) {
-    setStatus(error.message || t("stationFailed"), "error");
-  } finally {
-    setLoading(false);
-  }
-}
-
-async function fetchStationData(id, startYear, endYear) {
-  const params = new URLSearchParams({ start: startYear, end: endYear });
-  const response = await fetch(`${API_BASE}/station/${encodeURIComponent(id)}/data?${params.toString()}`);
-  if (!response.ok) {
-    throw new Error(t("stationDataFailed"));
-  }
-  return response.json();
-}
-
-function updateStationTitles(data) {
-  const name = data.name || (state.selectedStation && state.selectedStation.name) || data.station || state.selectedId;
-  elements.tableTitle.textContent = name ? t("annualMeansFor", { name }) : t("tableHint");
-  elements.chartTitle.textContent = name ? t("trendsFor", { name }) : t("chartHint");
-  elements.coverageChip.textContent = name ? t("coverageStation", { name }) : t("noStation");
-}
-
-function renderStations(stations) {
-  elements.stationList.innerHTML = "";
-  if (!stations.length) {
-    const item = document.createElement("li");
-    item.className = "muted";
-    item.textContent = t("noStationsAvailable");
-    elements.stationList.appendChild(item);
-    return;
-  }
-  stations.forEach((station) => {
-    const item = document.createElement("li");
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "station-item";
-    button.dataset.id = station.id;
-    const name = document.createElement("div");
-    name.textContent = station.name || station.id;
-    const meta = document.createElement("span");
-    meta.textContent = formatDistance(station.distance_km);
-    button.appendChild(name);
-    button.appendChild(meta);
-    item.appendChild(button);
-    elements.stationList.appendChild(item);
-  });
-}
-
-function highlightStation(id) {
-  const buttons = elements.stationList.querySelectorAll(".station-item");
-  buttons.forEach((button) => {
-    button.classList.toggle("active", button.dataset.id === id);
-  });
-}
-
-function renderChart(data) {
-  if (!window.Chart) {
-    setStatus(t("chartUnavailable"), "error");
-    return;
-  }
-  const annual = Array.isArray(data.annual) ? data.annual : [];
-  const labels = annual.map((row) => String(row.year));
-  const datasets = [
-    {
-      label: t("annualTmin"),
-      data: annual.map((row) => toNumber(row.tmin)),
-      borderColor: ANNUAL_COLORS.tmin,
-      backgroundColor: ANNUAL_COLORS.tmin,
-      tension: 0.3,
-      pointRadius: 2,
-      borderWidth: 2,
-    },
-    {
-      label: t("annualTmax"),
-      data: annual.map((row) => toNumber(row.tmax)),
-      borderColor: ANNUAL_COLORS.tmax,
-      backgroundColor: ANNUAL_COLORS.tmax,
-      tension: 0.3,
-      pointRadius: 2,
-      borderWidth: 2,
-    },
-  ];
-
-  state.activeSeasons.forEach((key) => {
-    const seasonConfig = SEASONS.find((season) => season.key === key);
-    if (!seasonConfig || !data.seasons || !data.seasons[key]) {
-      return;
-    }
-    const seasonLabel = t(seasonConfig.labelKey);
-    const seasonMap = mapByYear(data.seasons[key]);
-    const tminValues = labels.map((year) => {
-      const entry = seasonMap.get(year);
-      return entry ? toNumber(entry.tmin) : null;
-    });
-    const tmaxValues = labels.map((year) => {
-      const entry = seasonMap.get(year);
-      return entry ? toNumber(entry.tmax) : null;
-    });
-    datasets.push(
-      {
-        label: `${seasonLabel} Tmin`,
-        data: tminValues,
-        borderColor: seasonConfig.tmin,
-        backgroundColor: seasonConfig.tmin,
-        borderDash: [6, 6],
-        tension: 0.3,
-        pointRadius: 1.5,
-        borderWidth: 2,
-      },
-      {
-        label: `${seasonLabel} Tmax`,
-        data: tmaxValues,
-        borderColor: seasonConfig.tmax,
-        backgroundColor: seasonConfig.tmax,
-        borderDash: [6, 6],
-        tension: 0.3,
-        pointRadius: 1.5,
-        borderWidth: 2,
-      }
+  const langIndex = () => Math.max(0, LANGS.indexOf(langSelect.value || "en"));
+  const t = (key) => (TEXT[key] || ["", ""])[langIndex()];
+  const tp = (key, vars) =>
+    t(key).replace(/\{(\w+)\}/g, (_, k) => (vars && k in vars ? vars[k] : ""));
+  const num = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  };
+  const esc = (value) =>
+    String(value || "").replace(/[&<>"']/g, (ch) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch])
     );
-  });
+  const fmt = (value) =>
+    value === null || value === undefined || Number.isNaN(value)
+      ? "n/a"
+      : Number(value).toFixed(1);
+  const fmtDist = (value) =>
+    tp("distanceLabel", { distance: value === null ? "?" : Number(value).toFixed(1) });
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-  const axisColor = cssVar("--chart-axis");
-  const gridColor = cssVar("--chart-grid");
+  const setStatus = (text = "", tone = "") => {
+    statusText.textContent = text;
+    statusText.dataset.tone = tone;
+  };
+  const setLoading = (on) => {
+    spinner.classList.toggle("active", on);
+    searchBtn.disabled = on;
+  };
+  const setStationsPill = (count) => {
+    const text =
+      count && count > 0
+        ? tp(count === 1 ? "stationCountSingular" : "stationCountPlural", { count })
+        : t("noStationsYet");
+    stationsPill.textContent = text;
+    stationsPill.classList.toggle("active", count > 0);
+    stationCount.textContent = text;
+  };
 
-  if (state.chart) {
-    state.chart.data.labels = labels;
-    state.chart.data.datasets = datasets;
-    state.chart.update();
-  } else {
-    state.chart = new Chart(document.getElementById("trend-chart"), {
-      type: "line",
-      data: { labels, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: "index", intersect: false },
-        plugins: {
-          legend: {
-            display: elements.legendToggle.checked,
-            labels: { color: axisColor },
-          },
-        },
-        scales: {
-          x: {
-            ticks: { color: axisColor },
-            grid: { color: gridColor },
-          },
-          y: {
-            ticks: { color: axisColor },
-            grid: { color: gridColor },
-            title: {
-              display: true,
-              text: t("temperatureAxis"),
-              color: axisColor,
-            },
-          },
-        },
-      },
-    });
-  }
+  const applyDefaults = () => {
+    latInput.value = defaults.lat;
+    lonInput.value = defaults.lon;
+    radiusInput.value = defaults.radius;
+    limitInput.value = defaults.limit;
+    startInput.value = defaults.start;
+    endInput.value = defaults.end;
+    allStationsInput.checked = false;
+    limitInput.disabled = false;
+    yearRange.textContent = t("yearRangePlaceholder");
+  };
 
-  elements.chartEmpty.classList.toggle("is-hidden", labels.length > 0);
-}
+  const activeStationName = () => {
+    const station = stations.find((item) => item.id === selectedId);
+    return station ? station.name : "";
+  };
 
-function renderTable(data) {
-  const annual = Array.isArray(data.annual) ? data.annual : [];
-  const seasons = data.seasons || {};
-  const table = elements.table;
-  table.innerHTML = "";
-
-  const thead = document.createElement("thead");
-  const headRow = document.createElement("tr");
-  headRow.appendChild(createCell(t("yearHeader"), "th"));
-  headRow.appendChild(createCell(t("tminHeader"), "th"));
-  headRow.appendChild(createCell(t("tmaxHeader"), "th"));
-
-  state.activeSeasons.forEach((key) => {
-    const seasonConfig = SEASONS.find((season) => season.key === key);
-    if (seasonConfig) {
-      const label = t(seasonConfig.labelKey);
-      headRow.appendChild(createCell(`${label} Tmin`, "th"));
-      headRow.appendChild(createCell(`${label} Tmax`, "th"));
-    }
-  });
-
-  thead.appendChild(headRow);
-  table.appendChild(thead);
-
-  const tbody = document.createElement("tbody");
-  if (!annual.length) {
-    const row = document.createElement("tr");
-    row.className = "empty-row";
-    const cell = document.createElement("td");
-    cell.colSpan = 3 + state.activeSeasons.size * 2;
-    cell.textContent = t("tableNoData");
-    row.appendChild(cell);
-    tbody.appendChild(row);
-  } else {
-    const seasonMaps = {};
-    state.activeSeasons.forEach((key) => {
-      if (seasons[key]) {
-        seasonMaps[key] = mapByYear(seasons[key]);
+  const applyLanguage = () => {
+    document.documentElement.lang = langSelect.value;
+    document.title = t("documentTitle");
+    $$("[data-i18n]").forEach((el) => {
+      const key = el.getAttribute("data-i18n");
+      if (TEXT[key]) {
+        el.textContent = t(key);
       }
     });
-    annual.forEach((row) => {
-      const tr = document.createElement("tr");
-      tr.appendChild(createCell(row.year));
-      tr.appendChild(createCell(formatValue(row.tmin)));
-      tr.appendChild(createCell(formatValue(row.tmax)));
-      state.activeSeasons.forEach((key) => {
-        const entry = seasonMaps[key] ? seasonMaps[key].get(String(row.year)) : null;
-        tr.appendChild(createCell(formatValue(entry ? entry.tmin : null)));
-        tr.appendChild(createCell(formatValue(entry ? entry.tmax : null)));
-      });
-      tbody.appendChild(tr);
+    $$("[data-i18n-aria]").forEach((el) => {
+      const key = el.getAttribute("data-i18n-aria");
+      if (TEXT[key]) {
+        el.setAttribute("aria-label", t(key));
+      }
     });
-  }
+    chartTitle.textContent = selectedId ? tp("trendsFor", { station: activeStationName() }) : t("chartHint");
+    tableTitle.textContent = selectedId ? tp("annualMeansFor", { station: activeStationName() }) : t("tableHint");
+    setStationsPill(stations.length);
+    if (!stations.length) {
+      yearRange.textContent = t("yearRangePlaceholder");
+    }
+    if (!selectedId) {
+      coverageChip.textContent = t("noStationsYet");
+    }
+    renderTable();
+    renderChart();
+  };
 
-  table.appendChild(tbody);
-}
+  const setTheme = (value) => {
+    document.documentElement.dataset.theme = value;
+    themeSelect.value = value;
+    localStorage.setItem("ghcn-theme", value);
+    renderChart();
+  };
 
-function renderEmptyTable() {
-  elements.table.innerHTML = `
-    <thead>
-      <tr>
-        <th>${t("yearHeader")}</th>
-        <th>${t("tminHeader")}</th>
-        <th>${t("tmaxHeader")}</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr class="empty-row">
-        <td colspan="3">${t("noDataYet")}</td>
-      </tr>
-    </tbody>
-  `;
-}
+  const validate = ({ lat, lon, radius, start, end }) => {
+    if (lat === null || lat < -90 || lat > 90) return t("validationLat");
+    if (lon === null || lon < -180 || lon > 180) return t("validationLon");
+    if (radius === null || radius <= 0) return t("validationRadius");
+    if (start === null || end === null) return tp("validationRange", { min: startInput.min, max: endInput.max });
+    if (start > end) return t("validationYears");
+    const minYear = Number(startInput.min) || 1800;
+    const maxYear = Number(endInput.max) || 2025;
+    if (start < minYear || end > maxYear) return tp("validationRange", { min: minYear, max: maxYear });
+    return "";
+  };
 
-function createCell(value, tag = "td") {
-  const cell = document.createElement(tag);
-  cell.textContent = value;
-  return cell;
-}
-
-function mapByYear(list) {
-  const map = new Map();
-  list.forEach((entry) => {
-    map.set(String(entry.year), entry);
-  });
-  return map;
-}
-
-function formatValue(value) {
-  const number = toNumber(value);
-  if (number === null) {
-    return "--";
-  }
-  return number.toFixed(1);
-}
-
-function formatDistance(value) {
-  const number = toNumber(value);
-  if (number === null) {
-    return t("distanceNA");
-  }
-  return `${number.toFixed(1)} km`;
-}
-
-function clearStationData() {
-  state.data = null;
-  state.selectedId = null;
-  state.selectedStation = null;
-  elements.coverageChip.textContent = t("noStation");
-  elements.tableTitle.textContent = t("tableHint");
-  elements.chartTitle.textContent = t("chartHint");
-  elements.chartEmpty.classList.remove("is-hidden");
-  renderEmptyTable();
-  if (state.chart) {
-    state.chart.destroy();
-    state.chart = null;
-  }
-}
-
-function updateChartTheme() {
-  if (!state.chart) {
-    return;
-  }
-  const axisColor = cssVar("--chart-axis");
-  const gridColor = cssVar("--chart-grid");
-  state.chart.options.plugins.legend.labels.color = axisColor;
-  state.chart.options.scales.x.ticks.color = axisColor;
-  state.chart.options.scales.y.ticks.color = axisColor;
-  state.chart.options.scales.x.grid.color = gridColor;
-  state.chart.options.scales.y.grid.color = gridColor;
-  state.chart.options.scales.y.title.color = axisColor;
-  state.chart.update();
-}
-
-function cssVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
-function toNumber(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-}
-
-function initMap() {
-  if (!window.L) {
-    setStatus(t("leafletUnavailable"), "error");
-    return;
-  }
-  state.map = L.map("map", { zoomControl: true });
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 18,
-    attribution: "Map data (c) OpenStreetMap contributors",
-  }).addTo(state.map);
-  state.map.setView([DEFAULTS.lat, DEFAULTS.lon], 6);
-  state.map.on("click", (event) => {
-    state.mapPoint = event.latlng;
-    elements.fromMapBtn.disabled = false;
-    updateMapStatus();
-    placeMapPoint(event.latlng);
-  });
-}
-
-function placeMapPoint(latlng) {
-  clearMapLayers("mapPoint");
-  const marker = L.circleMarker([latlng.lat, latlng.lng], {
-    radius: 7,
-    color: "#1c7f85",
-    fillColor: "#1c7f85",
-    fillOpacity: 0.9,
-  }).addTo(state.map);
-  marker._tag = "mapPoint";
-  state.mapLayers.push(marker);
-}
-
-function updateMapStations() {
-  if (!state.map || !state.lastSearch) {
-    return;
-  }
-  clearMapLayers("stations");
-  const { lat, lon, radius } = state.lastSearch;
-  const center = L.circleMarker([lat, lon], {
-    radius: 6,
-    color: "#1c7f85",
-    fillColor: "#1c7f85",
-    fillOpacity: 0.9,
-  }).addTo(state.map);
-  center._tag = "stations";
-  state.mapLayers.push(center);
-
-  const circle = L.circle([lat, lon], {
-    radius: radius * 1000,
-    color: "#1c7f85",
-    fillColor: "#1c7f85",
-    fillOpacity: 0.08,
-  }).addTo(state.map);
-  circle._tag = "stations";
-  state.mapLayers.push(circle);
-
-  state.stations.forEach((station) => {
-    if (station.latitude === null || station.latitude === undefined) {
+  const updateStations = (items) => {
+    stations = items || [];
+    selectedId = "";
+    stationData = null;
+    setStationsPill(stations.length);
+    stationList.innerHTML = "";
+    chartEmpty.classList.remove("is-hidden");
+    if (!stations.length) {
+      stationList.innerHTML = `<li class="muted">${t("noStationsAvailable")}</li>`;
       return;
     }
-    if (station.longitude === null || station.longitude === undefined) {
+    stations.forEach((station) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<button class="station-item" type="button" data-id="${station.id}">
+          <span>${esc(station.name)}</span>
+          <span>${fmtDist(station.distance_km)}</span>
+        </button>`;
+      stationList.appendChild(li);
+    });
+  };
+
+  const setActiveStation = (id) => {
+    selectedId = id;
+    $$(".station-item").forEach((btn) => {
+      const active = btn.dataset.id === id;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  };
+
+  const getFormValues = () => ({
+    lat: num(latInput.value),
+    lon: num(lonInput.value),
+    radius: num(radiusInput.value),
+    limit: num(limitInput.value),
+    start: num(startInput.value),
+    end: num(endInput.value),
+  });
+
+  const fetchJson = async (url) => {
+    const response = await fetch(url);
+    if (!response.ok) {
+      let message = "";
+      try {
+        const data = await response.json();
+        message = data && data.error ? data.error : "";
+      } catch (error) {
+        message = "";
+      }
+      throw new Error(message || t("requestFailed"));
+    }
+    return response.json();
+  };
+
+  const onSearch = async (event) => {
+    event.preventDefault();
+    setStatus("");
+    const values = getFormValues();
+    const error = validate(values);
+    if (error) {
+      setStatus(error, "error");
       return;
     }
-    const isSelected = station.id === state.selectedId;
-    const marker = L.circleMarker([station.latitude, station.longitude], {
-      radius: isSelected ? 7 : 5,
-      color: isSelected ? "#2f9b6a" : "#d16a4d",
-      fillColor: isSelected ? "#2f9b6a" : "#d16a4d",
-      fillOpacity: 0.85,
-      weight: 1,
-    }).addTo(state.map);
-    marker._tag = "stations";
-    marker.bindPopup(`${station.name || station.id}<br>${formatDistance(station.distance_km)}`);
-    marker.on("click", () => selectStation(station.id));
-    state.mapLayers.push(marker);
-  });
-
-  state.map.fitBounds(circle.getBounds(), { padding: [30, 30] });
-}
-
-function clearMapLayers(tag) {
-  state.mapLayers = state.mapLayers.filter((layer) => {
-    if (!tag || layer._tag === tag) {
-      layer.remove();
-      return false;
+    const params = new URLSearchParams({
+      lat: values.lat,
+      lon: values.lon,
+      radius: values.radius,
+      start: values.start,
+      end: values.end,
+    });
+    if (!allStationsInput.checked && values.limit) {
+      params.set("limit", values.limit);
     }
-    return true;
-  });
-}
+    setLoading(true);
+    try {
+      const data = await fetchJson(`${apiBase}/stations?${params.toString()}`);
+      updateStations(data);
+      yearRange.textContent = `${values.start} - ${values.end}`;
+      setStatus(data.length ? t("stationsLoaded") : t("stationsNone"), data.length ? "success" : "");
+    } catch (error) {
+      setStatus(error.message || t("requestFailed"), "error");
+    } finally {
+      setLoading(false);
+      renderTable();
+      renderChart();
+    }
+  };
 
-init();
+  const onReset = () => {
+    applyDefaults();
+    updateStations([]);
+    setStatus(t("filtersReset"), "success");
+    coverageChip.textContent = t("noStationsYet");
+    chartTitle.textContent = t("chartHint");
+    tableTitle.textContent = t("tableHint");
+    tableBody.innerHTML = `<tr class="empty-row"><td colspan="3">${t("noDataYet")}</td></tr>`;
+  };
+
+  const onStationClick = async (event) => {
+    const btn = event.target.closest("button[data-id]");
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const values = getFormValues();
+    setActiveStation(id);
+    setLoading(true);
+    try {
+      const data = await fetchJson(`${apiBase}/station/${id}/data?start=${values.start}&end=${values.end}`);
+      stationData = data;
+      chartEmpty.classList.add("is-hidden");
+      chartTitle.textContent = tp("trendsFor", { station: data.name });
+      tableTitle.textContent = tp("annualMeansFor", { station: data.name });
+      coverageChip.textContent = tp("coverageStation", { station: data.name });
+      setStatus(t("stationLoaded"), "success");
+    } catch (error) {
+      setStatus(error.message || t("requestFailed"), "error");
+      stationData = null;
+      chartEmpty.classList.remove("is-hidden");
+    } finally {
+      setLoading(false);
+      renderTable();
+      renderChart();
+    }
+  };
+
+  const seasonKeys = () => seasonChecks.filter((item) => item.checked).map((item) => item.dataset.season);
+
+  const seriesByYear = (years, list, key) => {
+    const map = new Map((list || []).map((item) => [item.year, item]));
+    return years.map((year) => (map.has(year) ? map.get(year)[key] : null));
+  };
+
+  const cap = (value) => value.charAt(0).toUpperCase() + value.slice(1);
+
+  const renderTable = () => {
+    const seasons = seasonKeys();
+    const head = `<tr>
+        <th scope="col">${t("yearHeader")}</th>
+        <th scope="col">${t("tminHeader")}</th>
+        <th scope="col">${t("tmaxHeader")}</th>
+        ${seasons
+          .map(
+            (s) =>
+              `<th scope="col">${t(`season${cap(s)}`)} Tmin</th><th scope="col">${t(`season${cap(s)}`)} Tmax</th>`
+          )
+          .join("")}
+      </tr>`;
+    table.querySelector("thead").innerHTML = head;
+    if (!stationData || !stationData.annual || !stationData.annual.length) {
+      const cols = 3 + seasons.length * 2;
+      tableBody.innerHTML = `<tr class="empty-row"><td colspan="${cols}">${t("noDataYet")}</td></tr>`;
+      return;
+    }
+    const seasonsData = stationData.seasons || {};
+    tableBody.innerHTML = stationData.annual
+      .map((row) => {
+        const cells = seasons
+          .map((season) => {
+            const list = seasonsData[season] || [];
+            const found = list.find((item) => item.year === row.year) || {};
+            return `<td>${fmt(found.tmin)}</td><td>${fmt(found.tmax)}</td>`;
+          })
+          .join("");
+        return `<tr><td>${row.year}</td><td>${fmt(row.tmin)}</td><td>${fmt(row.tmax)}</td>${cells}</tr>`;
+      })
+      .join("");
+  };
+
+  const renderChart = () => {
+    if (!chartCanvas || !stationData || !stationData.annual || !stationData.annual.length) {
+      if (chart) {
+        chart.destroy();
+        chart = null;
+      }
+      return;
+    }
+    const years = stationData.annual.map((row) => row.year);
+    const seasons = seasonKeys();
+    const colors = {
+      annualTmin: css("--accent"),
+      annualTmax: "#d6604f",
+      springTmin: "#4caf50",
+      springTmax: "#2e7d32",
+      summerTmin: "#f4a261",
+      summerTmax: "#e76f51",
+      autumnTmin: "#8d6e63",
+      autumnTmax: "#6d4c41",
+      winterTmin: "#5c6bc0",
+      winterTmax: "#3949ab",
+    };
+
+    const datasets = [
+      {
+        label: t("annualTmin"),
+        data: stationData.annual.map((row) => row.tmin),
+        borderColor: colors.annualTmin,
+      },
+      {
+        label: t("annualTmax"),
+        data: stationData.annual.map((row) => row.tmax),
+        borderColor: colors.annualTmax,
+      },
+    ];
+
+    seasons.forEach((season) => {
+      const list = stationData.seasons && stationData.seasons[season];
+      datasets.push(
+        {
+          label: t(`${season}Tmin`),
+          data: seriesByYear(years, list, "tmin"),
+          borderColor: colors[`${season}Tmin`],
+        },
+        {
+          label: t(`${season}Tmax`),
+          data: seriesByYear(years, list, "tmax"),
+          borderColor: colors[`${season}Tmax`],
+        }
+      );
+    });
+
+    datasets.forEach((set) => {
+      set.borderWidth = 2;
+      set.pointRadius = 2;
+      set.tension = 0.25;
+    });
+
+    const grid = css("--chart-grid");
+    const axis = css("--chart-axis");
+
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: axis, boxWidth: 12, boxHeight: 12 },
+        },
+      },
+      interaction: { mode: "index", intersect: false },
+      scales: {
+        x: { ticks: { color: axis }, grid: { color: grid } },
+        y: {
+          ticks: { color: axis },
+          grid: { color: grid },
+          title: { display: true, text: t("temperatureAxis"), color: axis },
+        },
+      },
+    };
+
+    if (chart) {
+      chart.data.labels = years;
+      chart.data.datasets = datasets;
+      chart.options = options;
+      chart.update();
+    } else if (window.Chart) {
+      chart = new Chart(chartCanvas.getContext("2d"), {
+        type: "line",
+        data: { labels: years, datasets },
+        options,
+      });
+    }
+  };
+
+  form.addEventListener("submit", onSearch);
+  resetBtn.addEventListener("click", onReset);
+  stationList.addEventListener("click", onStationClick);
+  allStationsInput.addEventListener("change", () => {
+    limitInput.disabled = allStationsInput.checked;
+  });
+  seasonChecks.forEach((box) =>
+    box.addEventListener("change", () => {
+      renderTable();
+      renderChart();
+    })
+  );
+  langSelect.addEventListener("change", () => {
+    localStorage.setItem("ghcn-lang", langSelect.value);
+    applyLanguage();
+  });
+  themeSelect.addEventListener("change", () => setTheme(themeSelect.value));
+
+  const init = () => {
+    applyDefaults();
+    const savedLang = localStorage.getItem("ghcn-lang");
+    if (savedLang && LANGS.includes(savedLang)) {
+      langSelect.value = savedLang;
+    }
+    const savedTheme = localStorage.getItem("ghcn-theme");
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    setTheme(savedTheme || (prefersDark ? "dark" : "light"));
+    applyLanguage();
+    setStationsPill(0);
+    setStatus("");
+    tableTitle.textContent = t("tableHint");
+    chartTitle.textContent = t("chartHint");
+  };
+
+  init();
+})();
